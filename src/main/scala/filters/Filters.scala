@@ -9,58 +9,58 @@ case class Row(
 
 // Attributes
 
-trait Value[T] extends (Row => Option[T])
+trait Value[R, T] extends (R => Option[T])
 
-case class StringAttribute(name: String) extends Value[String] {
+case class StringAttribute(name: String) extends Value[Row, String] {
   def apply(row: Row): Option[String] = row.strings.get(name)
 }
 
-case class DoubleAttribute(name: String) extends Value[Double] {
+case class DoubleAttribute(name: String) extends Value[Row, Double] {
   def apply(row: Row): Option[Double] = row.doubles.get(name)
 }
 
-case class LongAttribute(name: String) extends Value[Long] {
+case class LongAttribute(name: String) extends Value[Row, Long] {
   def apply(row: Row): Option[Long] = row.longs.get(name)
 }
 
 // Comparisons
 
-trait Predicate extends (Row => Boolean)
+trait Predicate[R] extends (R => Boolean)
 
-case class Equals[T](left: Value[T], right: T) extends Predicate {
-  override def apply(row: Row): Boolean = left(row).exists(_.equals(right))
+case class Equals[R, T](left: Value[R, T], right: T) extends Predicate[R] {
+  override def apply(row: R): Boolean = left(row).exists(_.equals(right))
 }
 
-case class In[T](left: Value[T], right: Set[T]) extends Predicate {
-  override def apply(row: Row): Boolean = left(row).exists(right.contains)
+case class In[R, T](left: Value[R, T], right: Set[T]) extends Predicate[R] {
+  override def apply(row: R): Boolean = left(row).exists(right.contains)
 }
 
-case class GreaterThan[T](left: Value[T], right: T)(implicit num: Numeric[T]) extends Predicate {
-  override def apply(row: Row): Boolean = left(row).exists(num.gt(_, right))
+case class GreaterThan[R, T](left: Value[R, T], right: T)(implicit num: Numeric[T]) extends Predicate[R] {
+  override def apply(row: R): Boolean = left(row).exists(num.gt(_, right))
 }
 
-case class LessThan[T](left: Value[T], right: T)(implicit num: Numeric[T]) extends Predicate {
-  override def apply(row: Row): Boolean = left(row).exists(num.lt(_, right))
+case class LessThan[R, T](left: Value[R, T], right: T)(implicit num: Numeric[T]) extends Predicate[R] {
+  override def apply(row: R): Boolean = left(row).exists(num.lt(_, right))
 }
 
 // Logical operators
 
 object And {
-  def apply(preds: Predicate*): And = new And(preds)
+  def apply[R](preds: Predicate[R]*): And[R] = new And(preds)
 }
 
-case class And(preds: Iterable[Predicate]) extends Predicate {
-  override def apply(row: Row): Boolean = preds.forall(_.apply(row))
+case class And[R](preds: Iterable[Predicate[R]]) extends Predicate[R] {
+  override def apply(row: R): Boolean = preds.forall(_.apply(row))
 }
 
 object Or {
-  def apply(preds: Predicate*): Or = new Or(preds)
+  def apply[R](preds: Predicate[R]*): Or[R] = new Or(preds)
 }
 
-case class Or(preds: Iterable[Predicate]) extends Predicate {
-  override def apply(row: Row): Boolean = preds.exists(_.apply(row))
+case class Or[R](preds: Iterable[Predicate[R]]) extends Predicate[R] {
+  override def apply(row: R): Boolean = preds.exists(_.apply(row))
 }
 
-case class Not(right: Predicate) extends Predicate {
-  override def apply(row: Row): Boolean = !right(row)
+case class Not[R](right: Predicate[R]) extends Predicate[R] {
+  override def apply(row: R): Boolean = !right(row)
 }
